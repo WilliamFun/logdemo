@@ -1,0 +1,12 @@
+log:
+  serverList:
+    serverA:
+      ip: ***.**.***.*
+      user: ****
+      password: ****************
+      path: /****/
+    serverB:
+      ip: ***.**.***.*
+      user: ****
+      password: ****************
+      path: /****/
