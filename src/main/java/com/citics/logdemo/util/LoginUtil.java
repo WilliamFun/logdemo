@@ -1,33 +1,23 @@
 package com.citics.logdemo.util;
 
 import ch.ethz.ssh2.*;
+import com.citics.logdemo.bean.LogServer;
 import org.springframework.stereotype.Component;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Scanner;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * @author Zheng.Fan
  * @date 2022/12/23
  **/
-@Component
 public class LoginUtil {
-    //ssh连接的用户名
-    private final static String SSH_USER = "****";
-    //ssh连接的密码
-    private final static String SSH_PASSWORD = "****************";
-    //ssh远程连接的ip地址
-    private final static String SSH_REMOTE_SERVER = "***.**.***.*";
     //ssh连接的端口号
     private final static int SSH_REMOTE_PORT = 22;
     //等待时间
     private final static long TIME_OUT = 10;
-    //远程连接
-    public static Connection conn = null;
     //ssh 会话
     private Session session;
 
@@ -38,25 +28,30 @@ public class LoginUtil {
 //    //远程数据库端口用的端口号
 //    private final static int REMOTE_PORT = 31494;
 
-    public boolean login(){
+    public boolean login(LogServer logServer){
+        String server = logServer.getRemoteServer();
+        String user = logServer.getUser();
+        String password = logServer.getPassword();
         //创建远程连接，默认连接端口为22，如果不使用默认，可以使用方法
         //new Connection(ip, port)创建对象
-        conn = new Connection(SSH_REMOTE_SERVER,SSH_REMOTE_PORT);
+        Connection connection = new Connection(server,SSH_REMOTE_PORT);
         try {
             //连接远程服务器
-            conn.connect();
+            connection.connect();
             //使用用户名和密码登录
-            return conn.authenticateWithPassword(SSH_USER, SSH_PASSWORD);
+            return connection.authenticateWithPassword(user, password);
         } catch (IOException e) {
-            System.err.printf("用户%s密码%s登录服务器%s失败！", SSH_USER, SSH_PASSWORD, SSH_REMOTE_SERVER);
+            System.err.printf("用户%s密码%s登录服务器%s失败！", user, password, server);
             e.printStackTrace();
+        } finally {
+            logServer.setConnection(connection);
         }
         return false;
     }
 
-    public void logout ()
+    public void logout (Connection connection)
     {
-        conn.close();
+        connection.close();
     }
 
 
@@ -109,37 +104,28 @@ public class LoginUtil {
     /**
      * 获得远程服务器文件夹下所有文件
      *
-     * @param conn
+     * @param logServer
      * @param remoteDir
-     * @param outputStream
      */
-    public void getFiles(Connection conn, String remoteDir, OutputStream outputStream) {
-        Connection conn2 = new Connection(SSH_REMOTE_SERVER, SSH_REMOTE_PORT);
+    public List<SFTPv3DirectoryEntry> getFiles(LogServer logServer, String remoteDir) {
+        Connection connection = logServer.getConnection();
         SFTPv3Client sft = null;
+        List<SFTPv3DirectoryEntry> res = new ArrayList<>();
         try {
-            conn2.connect();
-            boolean isAuthenticated = conn2.authenticateWithPassword(SSH_USER, SSH_PASSWORD);
-            if (!isAuthenticated) {
-                System.err.println("authentication failed");
-            }
-            SCPClient client = new SCPClient(conn);
-
-            sft = new SFTPv3Client(conn2);
+            sft = new SFTPv3Client(connection);
             //获取远程目录下文件列表
             Vector<?> v = sft.ls(remoteDir);
             for (Object o : v) {
                 SFTPv3DirectoryEntry s = (SFTPv3DirectoryEntry) o;
-                if (fileType(s.filename)) {
-                    checkFile(conn,s,"生成",outputStream);
-                }
+                res.add(s);
             }
+            return res;
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
             if (sft != null) {
                 sft.close();
             }
-            conn2.close();
         }
     }
 
@@ -291,9 +277,6 @@ public class LoginUtil {
         System.out.println(log.login());
         OutputStream outputStream = new FileOutputStream("test");
         log.getFiles(conn,"/root/",outputStream);
-//        outputStream.flush();
-//        System.out.println(outputStream.toString());
-
     }
 
 }

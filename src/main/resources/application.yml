@@ -1,12 +1,12 @@
 log:
   serverList:
     serverA:
-      ip: ***.**.***.*
-      user: ****
-      password: ****************
-      path: /****/
+      ip: 101.42.252.8
+      user: root
+      password: YaNan19980224
+      path: /root/
     serverB:
-      ip: ***.**.***.*
-      user: ****
-      password: ****************
-      path: /****/
+      ip: 101.43.214.125
+      user: fanzheng
+      password: buaa@fanzheng666
+      path: /fanzheng/home/

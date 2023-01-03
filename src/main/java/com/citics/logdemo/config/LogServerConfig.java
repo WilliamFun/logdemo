@@ -2,6 +2,7 @@ package com.citics.logdemo.config;
 
 import com.citics.logdemo.bean.LogServer;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import java.util.Map;
  * @date 2022/12/29
  **/
 @ConfigurationProperties(prefix = "log")
+@Configuration
 public class LogServerConfig {
 
     private Map<String, LogServer> serverList;

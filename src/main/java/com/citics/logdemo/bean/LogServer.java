@@ -1,26 +1,20 @@
 package com.citics.logdemo.bean;
 
+import ch.ethz.ssh2.Connection;
+
 /**
  * @author Zheng.Fan
  * @date 2022/12/29
  **/
 public class LogServer {
-
-    private String ip;
-
+    //ssh连接的用户名
     private String user;
-
+    //ssh连接的密码
     private String password;
-
-    private String path;
-
-    public String getIp() {
-        return ip;
-    }
-
-    public void setIp(String ip) {
-        this.ip = ip;
-    }
+    //ssh远程连接的ip地址
+    private String remoteServer;
+    //远程连接
+    private Connection connection = null;
 
     public String getUser() {
         return user;
@@ -38,11 +32,19 @@ public class LogServer {
         this.password = password;
     }
 
-    public String getPath() {
-        return path;
+    public String getRemoteServer() {
+        return remoteServer;
     }
 
-    public void setPath(String path) {
-        this.path = path;
+    public void setRemoteServer(String remoteServer) {
+        this.remoteServer = remoteServer;
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
+    public void setConnection(Connection connection) {
+        this.connection = connection;
     }
 }
