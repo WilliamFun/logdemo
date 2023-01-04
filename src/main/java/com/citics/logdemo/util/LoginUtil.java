@@ -1,13 +1,18 @@
 package com.citics.logdemo.util;
 
 import ch.ethz.ssh2.*;
+import com.citics.logdemo.bean.ExcuRes;
+import com.citics.logdemo.bean.LogFile;
 import com.citics.logdemo.bean.LogServer;
+import com.citics.logdemo.service.LogFileService;
+import com.citics.logdemo.service.impl.LogFileServiceImpl;
 import org.springframework.stereotype.Component;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * @author Zheng.Fan
@@ -28,7 +33,7 @@ public class LoginUtil {
 //    //远程数据库端口用的端口号
 //    private final static int REMOTE_PORT = 31494;
 
-    public boolean login(LogServer logServer){
+    public static boolean login(LogServer logServer){
         String server = logServer.getRemoteServer();
         String user = logServer.getUser();
         String password = logServer.getPassword();
@@ -49,9 +54,9 @@ public class LoginUtil {
         return false;
     }
 
-    public void logout (Connection connection)
+    public static void logout (LogServer logServer)
     {
-        connection.close();
+        logServer.getConnection().close();
     }
 
 
@@ -77,7 +82,7 @@ public class LoginUtil {
      * @param fileName 服务器文件
      * @param localPath 本地目录
      */
-    public void copyFile(Connection conn, String fileName,String localPath){
+    public static void copyFile(Connection conn, String fileName,String localPath){
         SCPClient sc = new SCPClient(conn);
         try {
             sc.get(fileName, localPath);
@@ -92,7 +97,7 @@ public class LoginUtil {
      * @param fileName
      * @param outputStream
      */
-    public void copyFile(Connection conn, String fileName, OutputStream outputStream){
+    public static void copyFile(Connection conn, String fileName, OutputStream outputStream){
         SCPClient sc = new SCPClient(conn);
         try {
             sc.get(fileName, outputStream);
@@ -105,16 +110,15 @@ public class LoginUtil {
      * 获得远程服务器文件夹下所有文件
      *
      * @param logServer
-     * @param remoteDir
      */
-    public List<SFTPv3DirectoryEntry> getFiles(LogServer logServer, String remoteDir) {
+    public static List<SFTPv3DirectoryEntry> getFiles(LogServer logServer) {
         Connection connection = logServer.getConnection();
         SFTPv3Client sft = null;
         List<SFTPv3DirectoryEntry> res = new ArrayList<>();
         try {
             sft = new SFTPv3Client(connection);
             //获取远程目录下文件列表
-            Vector<?> v = sft.ls(remoteDir);
+            Vector<?> v = sft.ls(logServer.getRemotePath());
             for (Object o : v) {
                 SFTPv3DirectoryEntry s = (SFTPv3DirectoryEntry) o;
                 res.add(s);
@@ -189,7 +193,7 @@ public class LoginUtil {
      * @param conn Connection对象
      * @param cmds 要在linux上执行的指令
      */
-    public int exec(Connection conn, String cmds){
+    private static ExcuRes exec(Connection conn, String cmds){
         InputStream stdOut = null;
         InputStream stdErr = null;
         int ret = -1;
@@ -207,12 +211,40 @@ public class LoginUtil {
             //取得指令执行结束后的状态
             ret = session.getExitStatus();
 
-            conn.close();
-        }catch(Exception e){
+            session.close();
+
+        } catch (Exception e){
             e.printStackTrace();
         }
 
-        return ret;
+        ExcuRes res = new ExcuRes();
+        res.setRet(ret);
+        res.setStdErr(stdErr);
+        res.setStdOut(stdOut);
+        return res;
+    }
+
+    public static int SplitLogFile(Connection conn, LogFile logFile, String size) {
+        StringBuilder cmd = new StringBuilder("split " + "-C " + size + " -d ");
+        cmd.append(logFile.getFilename());
+        cmd.append(" --additional-suffix=.log " + "info.").append(logFile.getService()).append(".")
+                .append(logFile.getDateStr()).append('.');
+        return exec(conn,cmd.toString()).getRet();
+    }
+
+    public static int SplitLogFile(Connection conn, LogFile logFile, int num) {
+        ExcuRes res = exec(conn,"wc -l " + logFile.getFilename());
+        if (res.getRet() == -1) {
+            return -1;
+        }
+        long fileRows = new Scanner(res.getStdOut()).nextLong();
+        fileRows += (num-1);
+        long eveyRow = fileRows / num;
+        StringBuilder cmd = new StringBuilder("split " + "-l " + eveyRow + " -d ");
+        cmd.append(logFile.getFilename());
+        cmd.append(" --additional-suffix=.log " + "info.").append(logFile.getService()).append(".")
+                .append(logFile.getDateStr()).append('.');
+        return exec(conn,cmd.toString()).getRet();
     }
 
     /**
@@ -220,26 +252,25 @@ public class LoginUtil {
      * @param filename
      * @return
      */
-    public boolean fileType (String filename) {
-        return filename.endsWith(".log");
+    public static boolean fileType (String filename) {
+        return filename.startsWith("info.") && filename.endsWith(".log");
     }
 
 
-    public void checkFile(Connection conn, SFTPv3DirectoryEntry s, String toFind, OutputStream outputStream){
-        if(s.filename.contains(toFind)){
-            System.out.println("该文件名中包含关键词：" + toFind);
-        }
+    public static void checkFile(Connection conn, LogFile logFile, List<String> toFinds, OutputStream outputStream){
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        copyFile(conn,s.filename,out);
+        copyFile(conn, logFile.getFilename(), out);
 
         try(InputStream inputStream = new ByteArrayInputStream(out.toByteArray())){
             Scanner scanner = new Scanner(inputStream);
             while(scanner.hasNextLine()){
                 String line = scanner.nextLine();
-                line = line + "\n";
-                if (line.contains(toFind)) {
-                    outputStream.write(line.getBytes(StandardCharsets.UTF_8));
-                    System.out.println("该行内容包含关键字: " + line);
+                for (String toFind : toFinds) {
+                    if (line.contains(toFind)) {
+                        outputStream.write((line+"\n").getBytes(StandardCharsets.UTF_8));
+                        System.out.println("该行内容包含关键字: " + line);
+                        break;
+                    }
                 }
             }
         } catch (IOException e) {
@@ -247,36 +278,27 @@ public class LoginUtil {
         }
     }
 
-    public void checkTime(Connection conn, SFTPv3DirectoryEntry s, Date start, Date end, OutputStream outputStream) {
+    public static void checkTime(Connection conn, LogFile logFile, Date start, Date end, OutputStream outputStream) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        copyFile(conn,s.filename,out);
+        copyFile(conn, logFile.getFilename(), out);
 
         try(InputStream inputStream = new ByteArrayInputStream(out.toByteArray())){
             Scanner scanner = new Scanner(inputStream);
             while(scanner.hasNextLine()){
                 String line = scanner.nextLine();
-                line = line + "\n";
                 String timeStr = line.substring(0,8);
                 SimpleDateFormat formatter=new SimpleDateFormat("HH:mm:ss");
-                Date time = formatter.parse(timeStr);
-                if (time.after(start) || time.before(end)) {
-                    outputStream.write(line.getBytes(StandardCharsets.UTF_8));
-                    System.out.println("该行在时间范围内: " + line);
-                }
+                try {
+                    Date time = formatter.parse(timeStr);
+                    if (time.after(start) && time.before(end)) {
+                        outputStream.write((line + "\n").getBytes(StandardCharsets.UTF_8));
+                        System.out.println("该行在时间范围内: " + line);
+                    }
+                } catch (ParseException pe) {}
             }
-        } catch (IOException | ParseException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-
-
-
-    public static void main(String[] args) throws IOException {
-        LoginUtil log = new LoginUtil();
-        System.out.println(log.login());
-        OutputStream outputStream = new FileOutputStream("test");
-        log.getFiles(conn,"/root/",outputStream);
     }
 
 }

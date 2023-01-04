@@ -13,6 +13,8 @@ public class LogServer {
     private String password;
     //ssh远程连接的ip地址
     private String remoteServer;
+    //日志文件路径
+    private String remotePath;
     //远程连接
     private Connection connection = null;
 
@@ -38,6 +40,14 @@ public class LogServer {
 
     public void setRemoteServer(String remoteServer) {
         this.remoteServer = remoteServer;
+    }
+
+    public String getRemotePath() {
+        return remotePath;
+    }
+
+    public void setRemotePath(String remotePath) {
+        this.remotePath = remotePath;
     }
 
     public Connection getConnection() {

@@ -1,12 +1,12 @@
 log:
   serverList:
     serverA:
-      ip: 101.42.252.8
+      remoteServer: 101.42.252.8
       user: root
       password: YaNan19980224
-      path: /root/
+      remotePath: /root/
     serverB:
-      ip: 101.43.214.125
+      remoteServer: 101.43.214.125
       user: fanzheng
       password: buaa@fanzheng666
-      path: /fanzheng/home/
+      remotePath: /fanzheng/home/
