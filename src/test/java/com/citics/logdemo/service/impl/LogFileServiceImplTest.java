@@ -1,10 +1,7 @@
 package com.citics.logdemo.service.impl;
 
 import com.citics.logdemo.LogdemoApplication;
-import com.citics.logdemo.bean.LogFile;
-import com.citics.logdemo.bean.LogServer;
 import com.citics.logdemo.service.LogFileService;
-import com.citics.logdemo.util.LoginUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +38,7 @@ class LogFileServiceImplTest {
         Date date = new Date(2022-1900, Calendar.DECEMBER,30);
         List<String> toFinds = new ArrayList<>();
         toFinds.add("生成");
-        toFinds.add("耗时");
+        toFinds.add("请求");
         logFileService.logMatchByWord(service,date,toFinds);
     }
 
@@ -52,7 +49,7 @@ class LogFileServiceImplTest {
         Date date = new Date(2022-1900, Calendar.DECEMBER,30);
         SimpleDateFormat formatter=new SimpleDateFormat("HH:mm:ss");
         try {
-            Date start = formatter.parse("07:00:00");
+            Date start = formatter.parse("05:00:00");
             Date end = formatter.parse("08:00:00");
             logFileService.logMatchByTime(service,date,start,end);
         } catch (ParseException e) {
@@ -65,7 +62,7 @@ class LogFileServiceImplTest {
         logFileService.setServer("serverA");
         String service = "bussiness-interface";
         Date date = new Date(2021-1900, Calendar.AUGUST,30);
-        logFileService.splitLogFileByNum(service,date,3);
+        logFileService.splitLogFileByNum(service,date,5);
     }
 
     @Test

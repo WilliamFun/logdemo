@@ -1,7 +1,5 @@
 package com.citics.logdemo.service;
 
-import ch.ethz.ssh2.Connection;
-import com.citics.logdemo.bean.LogFile;
 import com.citics.logdemo.bean.LogServer;
 
 import java.util.Date;

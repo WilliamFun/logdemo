@@ -39,6 +39,12 @@ public class LogFileServiceImpl implements LogFileService {
         return logServer;
     }
 
+    /**
+     * 关键字过滤日志行
+     * @param service
+     * @param date
+     * @param toFinds
+     */
     @Override
     public void logMatchByWord(String service, Date date, List<String> toFinds) {
         List<LogFile> list = prefix(service, date);
@@ -65,6 +71,13 @@ public class LogFileServiceImpl implements LogFileService {
         }
     }
 
+    /**
+     * 时间范围过滤日志行
+     * @param service
+     * @param date
+     * @param start
+     * @param end
+     */
     @Override
     public void logMatchByTime(String service, Date date, Date start, Date end) {
         List<LogFile> list = prefix(service, date);
@@ -87,6 +100,12 @@ public class LogFileServiceImpl implements LogFileService {
         }
     }
 
+    /**
+     * 文件数量拆分日志文件
+     * @param service
+     * @param date
+     * @param num
+     */
     @Override
     public void splitLogFileByNum(String service, Date date, int num) {
         LogFile logFile = prefix(service, date).get(0);
@@ -98,6 +117,12 @@ public class LogFileServiceImpl implements LogFileService {
         LoginUtil.logout(logServer);
     }
 
+    /**
+     * 文件大小拆分日志文件
+     * @param service
+     * @param date
+     * @param size
+     */
     @Override
     public void splitLogFileBySize(String service, Date date, String size){
         LogFile logFile = prefix(service, date).get(0);
@@ -109,17 +134,33 @@ public class LogFileServiceImpl implements LogFileService {
         LoginUtil.logout(logServer);
     }
 
+    /**
+     * 前置操作
+     * @param service
+     * @param date
+     * @return
+     */
     private List<LogFile> prefix(String service, Date date) {
         LoginUtil.login(logServer);
         List<LogFile> list = selectLogFiles(logServer);
         return logMatchByName(list,date,service);
     }
 
+    /**
+     * 选择服务器
+     * @param ServerName
+     * @return
+     */
     private LogServer selectServer(String ServerName) {
         Map<String, LogServer> map = logServerConfig.getServerList();
         return map.get(ServerName);
     }
 
+    /**
+     * 读取全部日志
+     * @param logServer
+     * @return
+     */
     private List<LogFile> selectLogFiles(LogServer logServer) {
         List<SFTPv3DirectoryEntry> SFTPlist = LoginUtil.getFiles(logServer);
         List<LogFile> list = new ArrayList<>();
@@ -131,6 +172,13 @@ public class LogFileServiceImpl implements LogFileService {
         return list;
     }
 
+    /**
+     * 服务名和日期过滤日志文件
+     * @param logFiles
+     * @param date
+     * @param service
+     * @return
+     */
     private List<LogFile> logMatchByName(List<LogFile> logFiles, Date date, String service) {
         SimpleDateFormat formatter=new SimpleDateFormat("yyyy-MM-dd");
         String dateStr = formatter.format(date);
@@ -144,6 +192,11 @@ public class LogFileServiceImpl implements LogFileService {
         return res;
     }
 
+    /**
+     * 存回本地
+     * @param server
+     * @param logFile
+     */
     private void copyToLocal(LogServer server, LogFile logFile) {
         List<LogFile> list = logMatchByName(selectLogFiles(server),logFile.getDate(),logFile.getService());
         try {
@@ -159,6 +212,11 @@ public class LogFileServiceImpl implements LogFileService {
         }
     }
 
+    /**
+     * 类型转换
+     * @param sftPv3DirectoryEntry
+     * @return
+     */
     private LogFile convertSFTPToLogfile(SFTPv3DirectoryEntry sftPv3DirectoryEntry) {
         LogFile res = new LogFile();
         String[] info = sftPv3DirectoryEntry.filename.split("\\.");

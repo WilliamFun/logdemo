@@ -1,12 +1,12 @@
 log:
   serverList:
     serverA:
-      remoteServer: 101.42.252.8
-      user: root
-      password: YaNan19980224
-      remotePath: /root/
+      remoteServer: ***.**.***.*
+      user: ****
+      password: ************
+      remotePath: /****/
     serverB:
-      remoteServer: 101.43.214.125
-      user: fanzheng
-      password: buaa@fanzheng666
-      remotePath: /fanzheng/home/
+      remoteServer: ***.**.***.***
+      user: *********
+      password: ************
+      remotePath: /****/

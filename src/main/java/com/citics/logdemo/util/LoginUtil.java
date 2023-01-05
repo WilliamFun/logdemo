@@ -4,15 +4,11 @@ import ch.ethz.ssh2.*;
 import com.citics.logdemo.bean.ExcuRes;
 import com.citics.logdemo.bean.LogFile;
 import com.citics.logdemo.bean.LogServer;
-import com.citics.logdemo.service.LogFileService;
-import com.citics.logdemo.service.impl.LogFileServiceImpl;
-import org.springframework.stereotype.Component;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * @author Zheng.Fan
@@ -23,15 +19,6 @@ public class LoginUtil {
     private final static int SSH_REMOTE_PORT = 22;
     //等待时间
     private final static long TIME_OUT = 10;
-    //ssh 会话
-    private Session session;
-
-//    //远程mysql连接的IP地址
-//    private final static String MYSQL_REMOTE_SERVER = "124.543.789.111";
-//    //本地数据库连接时用的端口号，和yml配置的端口一致
-//    private final static int LOCAl_PORT = 3309;
-//    //远程数据库端口用的端口号
-//    private final static int REMOTE_PORT = 31494;
 
     public static boolean login(LogServer logServer){
         String server = logServer.getRemoteServer();
@@ -57,24 +44,6 @@ public class LoginUtil {
     public static void logout (LogServer logServer)
     {
         logServer.getConnection().close();
-    }
-
-
-    /**
-     * 上传本地文件到服务器目录下
-     * @param conn Connection对象
-     * @param fileName 本地文件
-     * @param remotePath 服务器目录
-     */
-    public void putFile(Connection conn, String fileName, String remotePath){
-        SCPClient sc = new SCPClient(conn);
-        try {
-            //将本地文件放到远程服务器指定目录下，默认的文件模式为 0600，即 rw，
-            //如要更改模式，可调用方法 put(fileName, remotePath, mode),模式须是4位数字且以0开头
-            sc.put(fileName, remotePath);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -130,34 +99,6 @@ public class LoginUtil {
             if (sft != null) {
                 sft.close();
             }
-        }
-    }
-
-    /**
-     * 在远程LINUX服务器上，在指定目录下，获取文件各个属性
-     * @param[in] conn Conncetion对象
-     * @param[in] remotePath 远程主机的指定目录
-     */
-    public void getFileProperties(Connection conn, String remotePath){
-        try {
-            SFTPv3Client sft = new SFTPv3Client(conn);
-            Vector<?> v = sft.ls(remotePath);
-            for(int i=0;i<v.size();i++){
-                SFTPv3DirectoryEntry s = new SFTPv3DirectoryEntry();
-                s = (SFTPv3DirectoryEntry) v.get(i);
-                //文件名
-                String filename = s.filename;
-                //文件的大小
-                Long fileSize = s.attributes.size;
-
-                System.out.println("file:" + filename + " " +"attri:" + fileSize);
-
-            }
-
-            sft.close();
-
-        } catch (Exception e1) {
-            e1.printStackTrace();
         }
     }
 
@@ -224,6 +165,14 @@ public class LoginUtil {
         return res;
     }
 
+    /**
+     * 按照文件大小拆分文件
+     * @param conn
+     * @param logFile
+     * @param size
+     * @return
+     */
+
     public static int SplitLogFile(Connection conn, LogFile logFile, String size) {
         StringBuilder cmd = new StringBuilder("split " + "-C " + size + " -d ");
         cmd.append(logFile.getFilename());
@@ -232,6 +181,13 @@ public class LoginUtil {
         return exec(conn,cmd.toString()).getRet();
     }
 
+    /**
+     * 按照拆分数量拆分文件
+     * @param conn
+     * @param logFile
+     * @param num
+     * @return
+     */
     public static int SplitLogFile(Connection conn, LogFile logFile, int num) {
         ExcuRes res = exec(conn,"wc -l " + logFile.getFilename());
         if (res.getRet() == -1) {
@@ -257,6 +213,13 @@ public class LoginUtil {
     }
 
 
+    /**
+     * 通过关键字过滤文件日志行
+     * @param conn
+     * @param logFile
+     * @param toFinds
+     * @param outputStream
+     */
     public static void checkFile(Connection conn, LogFile logFile, List<String> toFinds, OutputStream outputStream){
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         copyFile(conn, logFile.getFilename(), out);
@@ -277,6 +240,15 @@ public class LoginUtil {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 通过时间范围过滤日志行
+     * @param conn
+     * @param logFile
+     * @param start
+     * @param end
+     * @param outputStream
+     */
 
     public static void checkTime(Connection conn, LogFile logFile, Date start, Date end, OutputStream outputStream) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
